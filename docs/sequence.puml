@@ -1,0 +1,114 @@
+@startuml Worker Queue Sequence Diagram
+
+title Bounded Worker Queue - Task Flow
+
+actor Client
+participant "WorkerQueue" as WQ
+queue "Task Channel\n(buffered)" as TC
+participant "Worker 1" as W1
+participant "Worker 2" as W2
+participant "Worker N" as WN
+
+== Initialization ==
+Client -> WQ: New(workers=3, queueSize=5)
+activate WQ
+WQ -> WQ: Create buffered channel\n(capacity=5)
+WQ -> WQ: Create context
+return WorkerQueue instance
+
+Client -> WQ: Start()
+activate WQ
+WQ -> W1: spawn goroutine
+activate W1
+WQ -> W2: spawn goroutine
+activate W2
+WQ -> WN: spawn goroutine
+activate WN
+return Started
+
+W1 -> TC: poll for tasks
+W2 -> TC: poll for tasks
+WN -> TC: poll for tasks
+
+== Normal Task Submission ==
+Client -> WQ: Submit(ctx, task1)
+activate WQ
+WQ -> TC: send task1
+note right: Non-blocking\n(channel not full)
+return nil
+
+W1 <- TC: receive task1
+W1 -> W1: execute task1(ctx)
+W1 -> TC: poll for next task
+
+== Backpressure (Queue Full) ==
+note over Client, TC: Queue is full (5 tasks queued, workers busy)
+
+Client -> WQ: Submit(ctx, task6)
+activate WQ
+WQ -> TC: send task6
+note right: **BLOCKS HERE**\nChannel at capacity\nWaiting for space
+...Worker completes a task...
+W2 -> W2: task completed
+W2 -> TC: poll for next task
+note right: Space available\nin channel
+TC --> WQ: task6 accepted
+return nil
+
+== Context Cancellation During Submit ==
+Client -> WQ: Submit(ctxWithTimeout, task7)
+activate WQ
+WQ -> TC: send task7
+note right: Blocks (queue full)
+...Context timeout expires...
+WQ <-- Client: ctx.Done()
+return ctx.Err() (deadline exceeded)
+
+== Task Execution with Context ==
+W1 <- TC: receive task
+W1 -> W1: execute task(ctx)
+note right: Task respects\ncontext cancellation
+
+== Graceful Shutdown ==
+Client -> WQ: Shutdown(ctx)
+activate WQ
+WQ -> TC: close(tasks)
+note right: No more tasks accepted
+
+TC --> W1: channel closed signal
+TC --> W2: channel closed signal
+TC --> WN: channel closed signal
+
+W1 -> W1: complete current task
+W1 -> W1: exit worker loop
+deactivate W1
+
+W2 -> W2: complete current task
+W2 -> W2: exit worker loop
+deactivate W2
+
+WN -> WN: complete current task
+WN -> WN: exit worker loop
+deactivate WN
+
+WQ -> WQ: wg.Wait()\n(all workers done)
+return nil
+
+== Immediate Stop ==
+Client -> WQ: Stop()
+activate WQ
+WQ -> WQ: cancel context
+WQ -> W1: ctx.Done()
+WQ -> W2: ctx.Done()
+WQ -> WN: ctx.Done()
+
+W1 -> W1: exit immediately
+W2 -> W2: exit immediately
+WN -> WN: exit immediately
+
+WQ -> WQ: wg.Wait()
+deactivate WQ
+
+note over Client, WN: Queued tasks not executed
+
+@enduml
