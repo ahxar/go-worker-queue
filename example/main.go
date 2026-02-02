@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	workerqueue "github.com/safar/go-worker-queue"
+	workerqueue "github.com/ahxar/go-worker-queue"
 )
 
 func main() {

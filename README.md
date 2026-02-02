@@ -15,7 +15,7 @@ A production-ready bounded worker queue implementation in Go with fixed workers,
 ## Installation
 
 ```bash
-go get github.com/safar/go-worker-queue
+go get github.com/ahxar/go-worker-queue
 ```
 
 ## Quick Start
@@ -28,7 +28,7 @@ import (
     "fmt"
     "time"
 
-    workerqueue "github.com/safar/go-worker-queue"
+    workerqueue "github.com/ahxar/go-worker-queue"
 )
 
 func main() {
@@ -158,6 +158,7 @@ BenchmarkConcurrentSubmit-8   	19201401	       129.0 ns/op	       0 B/op	       
 ```
 
 Key metrics:
+
 - ~130-200ns per operation
 - Zero allocations in hot path
 - Scales well with concurrent submissions
@@ -179,6 +180,7 @@ go test -bench=. -benchmem
 ## Examples
 
 See [example/main.go](example/main.go) for a complete runnable example demonstrating:
+
 - Basic task execution
 - Backpressure behavior
 - Context cancellation
