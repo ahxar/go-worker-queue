@@ -24,7 +24,7 @@ func TestBasicExecution(t *testing.T) {
 	}
 
 	// Submit 5 tasks
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		if err := wq.Submit(context.Background(), task); err != nil {
 			t.Fatalf("failed to submit task: %v", err)
 		}
@@ -282,7 +282,7 @@ func TestConcurrentSubmit(t *testing.T) {
 	submitters := 10
 	tasksPerSubmitter := 10
 
-	for i := 0; i < submitters; i++ {
+	for range submitters {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -321,8 +321,7 @@ func BenchmarkSubmit(b *testing.B) {
 	task := func(ctx context.Context) error { return nil }
 	ctx := context.Background()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := wq.Submit(ctx, task); err != nil {
 			b.Fatalf("submit failed: %v", err)
 		}
@@ -348,9 +347,8 @@ func BenchmarkWorkerThroughput(b *testing.B) {
 	}
 
 	ctx := context.Background()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := wq.Submit(ctx, task); err != nil {
 			b.Fatalf("submit failed: %v", err)
 		}
