@@ -99,6 +99,14 @@ func (wq *WorkerQueue) Submit(ctx context.Context, task Task) error {
 	}
 	wq.mu.Unlock()
 
+	// Check if worker queue context is already cancelled
+	// This prevents race condition where channel send might be chosen over cancelled context
+	select {
+	case <-wq.ctx.Done():
+		return fmt.Errorf("worker queue stopped")
+	default:
+	}
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
